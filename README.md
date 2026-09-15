@@ -1,7 +1,7 @@
  — Data Science × Logistic Regression
 
 
-DSLR is a machine learning project from the 42 curriculum. The goal is to predict a Hogwarts student's house by implementing multiclass logistic regression from scratch, without using a machine learning library.
+The goal of this machine learning project is to predict a Hogwarts student's house by implementing multiclass logistic regression from scratch, without using a machine learning library.
 
 The project focuses on feature preprocessing, logistic regression, gradient descent, and one-vs-rest classification.
 
