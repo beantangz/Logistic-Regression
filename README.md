@@ -1,69 +1,31 @@
  — Data Science × Logistic Regression
 
 
+DSLR is a machine learning project from the 42 curriculum. The goal is to predict a Hogwarts student's house by implementing multiclass logistic regression from scratch, without using a machine learning library.
 
+The project focuses on feature preprocessing, logistic regression, gradient descent, and one-vs-rest classification.
 
+Model pipeline
 
-This is a data science and machine learning project. Its goal is to explore a Hogwarts student dataset and build a multiclass logistic regression classifier from scratch to predict each student's house.
-
-The project covers the full machine learning workflow: statistical analysis, data visualization, feature selection, preprocessing, gradient descent, one-vs-rest classification, and prediction.
-Project goals
-
-    Reimplement the main behavior of pandas.DataFrame.describe() without using ready-made statistical functions.
-
-    Explore the dataset using histograms, scatter plots, and a pair plot.
-
-    Identify uninformative and redundant features.
-
-    Implement logistic regression and gradient descent without a machine learning library.
-
-    Train one binary classifier per Hogwarts house using a one-vs-rest strategy.
-
-    Generate predictions in the required houses.csv format.
-
-Exploratory data analysis
-Descriptive statistics
-
-describe.py calculates the following statistics for every numerical feature:
-
-    Count
-
-    Mean
-
-    Standard deviation
-
-    Minimum
-
-    25th percentile
-
-    Median
-
-    75th percentile
-
-    Maximum
-
-The calculations are implemented manually instead of relying on functions such as mean, std, min, max, percentile, or describe.
-Histogram
-
-histogram.py compares the score distributions of the four houses for every course.
-
-The analysis shows that Arithmancy and Care of Magical Creatures have very similar distributions across all houses, making them weak features for house classification.
-Scatter plot
-
-scatter_plot.py reveals that Astronomy and Defense Against the Dark Arts are almost perfectly negatively correlated. They therefore carry nearly identical information.
-Pair plot
-
-pair_plot.py displays the relationships between every pair of numerical features. Point colors represent Hogwarts houses, making it possible to identify:
-
-    features that separate the houses;
-
-    features with little discriminative information;
-
-    strongly correlated and redundant features.
+dataset_train.csv
+        ↓
+Missing-value imputation
+        ↓
+Feature standardization
+        ↓
+Four one-vs-rest classifiers
+        ↓
+Gradient descent
+        ↓
+weights.json
+        ↓
+Predictions on dataset_test.csv
+        ↓
+houses.csv
 
 Selected features
 
-The classifier uses the following courses:
+Exploratory analysis is used to remove uninformative or redundant courses. The model is trained with:
 
 FEATURES = [
     "Astronomy",
@@ -78,146 +40,153 @@ FEATURES = [
     "Flying",
 ]
 
-The following features are excluded:
-Feature	Reason
-Arithmancy	Similar distribution across all houses
-Care of Magical Creatures	Very low discriminative power
-Defense Against the Dark Arts	Redundant with Astronomy
-Logistic regression
+Arithmancy and Care of Magical Creatures are excluded because their distributions are similar across all houses. Defense Against the Dark Arts is excluded because it is redundant with Astronomy.
 
-For one student, the model first calculates a linear score:
-
-$$
-z = Xw + b
-$$
-
-The sigmoid function converts this score into a value between 0 and 1:
-
-$$
-\sigma(z) = \frac{1}{1 + e^{-z}}
-$$
-
-The parameters are optimized with gradient descent:
-
-$$
-w \leftarrow w - \alpha \frac{X^T(\hat{y} - y)}{m}
-$$
-
-$$
-b \leftarrow b - \alpha \frac{\sum(\hat{y} - y)}{m}
-$$
-
-where:
-
-    $X$ is the feature matrix;
-
-    $w$ contains one weight per feature;
-
-    $b$ is the bias;
-
-    $\alpha$ is the learning rate;
-
-    $m$ is the number of students.
-
-One-vs-rest classification
-
-Because the dataset contains four houses, the project trains four independent binary classifiers:
-
-Gryffindor vs all other houses
-Hufflepuff vs all other houses
-Ravenclaw vs all other houses
-Slytherin vs all other houses
-
-For each student, all four classifiers produce a score. The predicted house is the one with the highest score.
-Data preprocessing
+Preprocessing
 
 Missing values are replaced with the corresponding feature mean calculated from the training dataset.
 
-Each feature is then standardized:
+Because course scores use very different scales, every feature is standardized:
 
 $$
 x' = \frac{x - \mu}{\sigma}
 $$
 
-This prevents large-scale features from dominating gradient descent. The training means and standard deviations are stored with the model and reused during prediction.
-Requirements
+After standardization, the features are centered around zero and use comparable scales. This prevents large-valued courses from dominating the gradients.
 
-    Python 3.10+
+The training means and standard deviations are saved with the model and reused unchanged during prediction.
 
-    NumPy
+Logistic regression
 
-    Matplotlib
+For one student, a binary classifier first computes a linear score:
 
-Install the dependencies with:
+$$
+z = Xw + b
+$$
+
+The sigmoid function transforms this score into a value between 0 and 1:
+
+$$
+\sigma(z) = \frac{1}{1 + e^{-z}}
+$$
+
+A large positive score produces a result close to 1, while a large negative score produces a result close to 0.
+
+Gradient descent
+
+The weights start at zero and are improved iteratively. At each iteration, logreg_train.py performs:
+
+linear_results = features @ weights + bias
+predictions = sigmoid(linear_results)
+errors = predictions - labels
+
+weight_gradient = (
+    errors @ features
+) / student_count
+
+bias_gradient = mean(errors)
+
+weights -= learning_rate * weight_gradient
+bias -= learning_rate * bias_gradient
+
+The gradients are:
+
+$$
+\nabla_w J = \frac{1}{m}X^T(\hat{y} - y)
+$$
+
+$$
+\frac{\partial J}{\partial b}
+= \frac{1}{m}\sum_{i=1}^{m}(\hat{y}_i-y_i)
+$$
+
+The parameters are updated in the opposite direction of the gradient:
+
+$$
+w \leftarrow w - \alpha \nabla_w J
+$$
+
+$$
+b \leftarrow b - \alpha \frac{\partial J}{\partial b}
+$$
+
+Here, $m$ is the number of students and $\alpha$ is the learning rate.
+
+One-vs-rest classification
+
+Logistic regression is binary, while Hogwarts has four houses. The training program therefore builds four classifiers:
+
+Gryffindor vs all
+Hufflepuff vs all
+Ravenclaw vs all
+Slytherin vs all
+
+For each classifier, target labels are converted to 1 for the current house and 0 for every other house.
+
+During prediction, the four models calculate one score each. The house with the highest score is selected.
+
+Usage
+
+Install the dependencies:
 
 python3 -m pip install numpy matplotlib
 
-Usage
-Display descriptive statistics
-
-python3 describe.py datasets/dataset_train.csv
-
-Display histograms
-
-python3 histogram.py datasets/dataset_train.csv
-
-Display the scatter plot
-
-python3 scatter_plot.py datasets/dataset_train.csv
-
-Display the pair plot
-
-python3 pair_plot.py datasets/dataset_train.csv
-
-Train the model
+Train the four classifiers:
 
 python3 logreg_train.py datasets/dataset_train.csv
 
-Training generates:
+This generates weights.json, containing the preprocessing values, weights, and bias of every classifier.
 
-weights.json
-
-The file contains the selected features, preprocessing parameters, weights, and bias of each house classifier.
-Generate predictions
+Generate predictions:
 
 python3 logreg_predict.py \
     datasets/dataset_test.csv \
     weights.json
 
-Prediction generates houses.csv in the required format:
+The output is written to houses.csv:
 
 Index,Hogwarts House
 0,Gryffindor
 1,Hufflepuff
 2,Ravenclaw
-3,Slytherin
 
 Main files
-File	Purpose
-describe.py	Computes descriptive statistics from scratch
-histogram.py	Compares course distributions between houses
-scatter_plot.py	Displays the relationship between two features
-pair_plot.py	Compares all numerical features pairwise
-logreg_train.py	Trains four one-vs-rest logistic regression models
-logreg_predict.py	Predicts houses and generates houses.csv
-weights.json	Stores trained parameters and preprocessing values
-What I learned
 
-    How descriptive statistics are calculated internally
+File
 
-    How to explore and interpret multidimensional data
+Purpose
 
-    How to detect weak and redundant features
+logreg_train.py
 
-    Why feature normalization matters for gradient descent
+Preprocesses the data and trains four classifiers with gradient descent
 
-    How logistic regression converts a linear score into a classification score
+logreg_predict.py
 
-    How gradients update weights and bias iteratively
+Loads the model and predicts each student's house
 
-    How one-vs-rest extends binary classification to multiple classes
+weights.json
 
-    How to persist a trained model and reproduce preprocessing at prediction time
+Stores preprocessing parameters, weights, and biases
+
+houses.csv
+
+Contains the final predictions
+
+Key concepts
+
+Feature imputation and standardization
+
+Vectorized matrix operations
+
+Sigmoid activation
+
+Binary cross-entropy gradient
+
+Gradient descent
+
+One-vs-rest multiclass classification
+
+Model serialization and reproducible preprocessing
 
 Author
 
